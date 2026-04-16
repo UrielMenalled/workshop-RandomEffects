@@ -1,0 +1,393 @@
+---
+title: "Random effects in ML"
+author: "Uriel Menalled"
+date: today
+format: 
+  revealjs:
+    transition: none
+highlight-style: breeze
+---
+
+
+```{r}
+#| label: Packages
+
+library(tidymodels)
+library(tidyverse)
+library(embed)
+library(lme4)
+library(rsample)
+library(ranger)
+library(gt)
+
+set.seed(42)
+```
+
+## Introduction {.smaller}
+
+:::::{.columns}
+::::{.column width="70%"}
+:::{.incremental}
+- Often data come from experiments with a hierarchial structure
+
+- Hierarchial structure causes data-points to not meet the assumptions of independence as observations from the same group will be correlated to one another
+:::
+::::
+
+::::{.column width="30%"}
+![](Farmhouse-in-Provence-Vincent-van-Gogh.jpg){fig-align=right width="60%"}
+![](field_pic_2.jpg){fig-align=right width="60%"}
+::::
+:::::
+. . .
+
+For example, if you were sampling yield in these different fields, observations within the same field would be correlated to one another.
+
+## Introduction {.smaller}
+:::{.incremental}
+**Random effects can solve this issue**
+
+- **The issue**: Observations nested within groups (fields, varieties, blocks) are not independent
+
+- **Naiveté**: Treating nested data as independent leads to underestimated standard errors and spuriously significant results
+
+- **Random Effects Solution**: Allows each group to have its own deviation from the population intercept (or slope), capturing within-group correlation structure
+
+- **Modeling Group Variation**: Instead of treating group membership as a fixed categorical variable, random effects estimate group-specific offsets while sharing information across groups via a shared probability distribution (typically normal)
+
+- **Proper Standard Errors**: By accounting for within-group correlation, random effects yield valid confidence intervals and p-values appropriate to the actual sample size and design
+
+- **Efficiency Gain**: Partial pooling (shrinkage) of group estimates improves precision compared to fitting completely separate models per group
+:::
+
+
+##
+- I will create a synthetic agronomic experiment looking at yield across 5 fields with 3 obs each
+
+- The resulting data (`dat`) is has a hierarchical structure: observations *nested* within fields
+
+```{r}
+#| label: simp dataframe
+#| echo: false
+
+# Crop yield measured at 5 fields, 3 obs each
+dat <- data.frame(
+    field = rep(c("A", "B", "C"),each = 3),
+    fertilizer = c(10, 20, 30, 10, 20, 30, 10, 20, 30),
+    yield = c(
+        2, 3, 4, # field A — average; group mean = 3
+        5, 6, 7, # field B — high-yielding; group mean = 6
+        3, 4, 5)) # field C — average; group mean = 4
+
+dat
+```
+
+
+## The simple model
+
+This is a random-intercept-only model where a horizontal line is fit to the grand mean of the data (i.e. yield = 4.33).
+
+```{r}
+#| label: simp model
+#| echo: true
+
+fit_simp <- lmer(yield ~ 1 + (1 | field), data = dat)
+```
+
+
+```{r}
+#| label: simp model plot
+#| fig.align: center
+
+hist(dat$yield, main = NULL, xlab = "Yield", cex.lab = 1.5)
+abline(v = fixef(fit_simp), col = "red", lwd = 4)
+legend("topright", legend = "grand mean", col = "red", lwd = 4, bty = "n", cex = 1.5)
+invisible(dev.off())
+```
+
+## BLUPs: Definition
+- **Best Linear Unbiased Predictions of Random Effects (BLUPs):** A method that is used in linear mixed models for the estimation of random effects
+
+- When combined with fixed effect estimates, BLUPs are used to calculate the model predictions. Basically, the model is saying: *Give the fixed and random effects of an observation, this is my prediction of its value*
+
+
+## BLUPs: Formula
+::: {style="font-size: 60%;"}
+$$\text{BLUP}_i = \lambda_i (\bar{y}_i - \mu)$$
+
+where $\lambda_i = \frac{\sigma^2_u}{\sigma^2_u + \sigma^2_e / n_i}$ is the shrinkage factor.
+
+- $\lambda_i$ = shrinkage factor = $\frac{\sigma^2_u}{\sigma^2_u + \sigma^2_e / n_i}$
+
+- $\sigma^2_u$ = between-group variance
+
+- $\sigma^2_e$ = residual (within-group) variance
+
+- $n_i$ = number of observations in group $i$
+
+- $\bar{y}_i$ = mean observation for group $i$
+
+- $\mu$ = fixed intercept (grand mean from `fixef()`)
+
+
+- **Shrinkage factor** ($\lambda$): Controls how much to trust group-specific data
+
+  - $\lambda \approx 1$ → high between-group variance → trust data more
+
+  - $\lambda < 1$ → low between-group variance → shrink toward grand mean
+:::
+
+## BLUPs: Manual calculation {.smaller}
+
+```{r}
+#| label: BLUP manual
+#| echo: true
+
+# Extract variance components
+vc     <- as.data.frame(VarCorr(fit_simp))
+sigma2_u <- vc$vcov[1]   # between-group variance
+sigma2_e <- vc$vcov[2]   # residual variance
+mu_hat   <- fixef(fit_simp)   # grand mean (could be a fixed intercept)
+
+# Compute BLUPs manually
+blups <- dat |>
+  summarise(
+    ybar = mean(yield),
+    n    = n(),
+    .by  = field
+  ) |>
+  mutate(
+    lambda = sigma2_u / (sigma2_u + sigma2_e / n),  # shrinkage factor
+    blup   = lambda * (ybar - mu_hat)
+  )
+
+blups
+```
+
+## BLUPs: R calculation
+
+Or much simpler, in R:
+
+```{r}
+#| label: BLUP auto
+#| echo: true
+
+ranef(fit_simp)$field
+```
+
+## BLUPs and model predictions {.smaller}
+
+By combinding BLUPs with the model coefficients, we can manually get model predictions.
+
+```{r}
+#| label: BLUP and FE
+#| echo: true
+
+fixef(fit_simp) + ranef(fit_simp)$field
+```
+
+The code above tells us that there should be three unique values predicted from the model: **3.19** for field A, **5.76** for field B, and **4.04** for field C.
+
+When we look at the model predictions we can see that this is what is found!
+
+```{r}
+#| label: BLUP and Pred
+#| echo: true
+#| output-location: column
+
+data.frame(
+  obs = names(predict(fit_simp)),
+  pred = predict(fit_simp))
+```
+
+## Machine learning {.smaller}
+
+We can recreate the impact of the random effect through linear function encoding. This infuses or "encodes" a factor variable with a response by treating it as a random effect.
+
+According to the TidyModels documentation, *"The coefficients are created using a no intercept model"* `lmer(outcome ~ 1 + (1 | predictor), data = data, ...)`.
+
+. . .
+
+So, we should be able to recreate predict(fit_simp):
+
+```{r}
+#| label: simple recipe
+#| echo: true
+#| output-location: column-fragment
+
+library(recipes)
+library(embed)
+
+rec <- recipe(yield ~ field, data = dat) |>
+  step_lencode_mixed(field, outcome = vars(yield))
+
+prep(rec) |> bake(new_data = dat)
+```
+
+. . . 
+
+:::{.callout-warning}
+Notice that the recipe formula is not the same as the lmer formula. In the TidyModels syntax, you just tell it which columns to encode and what the outcome is. So in this case, `yield~field`.
+:::
+
+## The more complicated model #1 {.smaller}
+
+What if you model contains a numeric fixed effect?
+
+Now that we know how R calculates BLUPs and predictions, we can create a bigger data frame to allow us to fit a more complicated model.
+```{r}
+#| label: dat2 creation
+
+dat2 <- data.frame(
+  field      = rep(c("A", "B", "C", "D", "E"), each = 6),
+  fertilizer = rep(c(10, 20, 30, 40, 50, 60), times = 5),
+  yield      = c(
+    1.8, 2.9, 4.1, 5.0, 6.2, 7.1,  # field A — low-yielding
+    4.5, 5.8, 6.9, 8.1, 9.0, 10.2, # field B — high-yielding
+    2.9, 4.0, 5.2, 6.1, 7.3, 8.0,  # field C — average
+    3.5, 4.6, 5.8, 6.9, 8.1, 9.2,  # field D — above average
+    1.2, 2.4, 3.5, 4.6, 5.7, 6.8   # field E — low-yielding
+  )
+)
+glimpse(dat2)
+```
+
+## The more complicated model #1 {.smaller}
+
+We can manually calculate predictions with the formula:
+
+$$y_{ij} = \beta_0 + \beta_1 \text{fertilizer}_{ij} + u_i + \varepsilon_{ij}$$
+
+where:
+- $y_{ij}$ = yield for observation $j$ in field $i$
+
+- $\beta_0$ = fixed intercept
+
+- $\beta_1$ = fixed slope for fertilizer
+
+- $u_i \sim N(0, \sigma^2_u)$ = random intercept for field $i$
+
+- $\varepsilon_{ij} \sim N(0, \sigma^2_e)$ = residual error
+
+```{r}
+#| label: mod 2
+#| echo: true
+#| output: false
+
+fit_2 <- lmer(yield ~ fertilizer + (1 | field), data = dat2)
+fit_2_re <- data.frame(field = row.names(ranef(fit_2)$field), BLUP = pull(ranef(fit_2)$field))
+
+dat2%>% 
+  mutate(intercept = fixef(fit_2)[1],
+         fert_eff = fixef(fit_2)[2]) %>% 
+  left_join(.,fit_2_re) %>% 
+  mutate(preds_manual = intercept + fertilizer*fert_eff + BLUP,
+         preds_R = predict(fit_2)) %>% 
+  slice_sample(n = 10)
+```
+
+## The more complicated model #1 {.smaller}
+
+Great, we were able to get prediction by hand
+```{r}
+#| label: mod2 ML_1
+#| echo: true
+dat2%>% 
+  mutate(intercept = fixef(fit_2)[1],
+         fert_eff = fixef(fit_2)[2]) %>% 
+  left_join(.,fit_2_re) %>% 
+  mutate(preds_manual = intercept + fertilizer*fert_eff + BLUP,
+         preds_R = predict(fit_2)) %>% 
+  head(n = 10)
+```
+
+## The more complicated model #1 {.smaller}
+ Now the question is what is happening in our ML framework...
+```{r}
+#| label: mod2 ML_2
+#| echo: true
+
+rec_2 <- recipe(yield ~ fertilizer + field, data = dat2) |>
+  step_lencode_mixed(field, outcome = vars(yield))
+prep(rec_2) |> bake(new_data = dat2)
+```
+
+. . . 
+
+:::{.callout-caution}
+Wait a minute! these field values aren't the predictions OR the BLUP values of `fit_2` (see prev. slide).
+:::
+
+. . .
+
+:::{.callout-tip}
+Remember, the TidyModels doc...
+:::
+
+## {.smaller}
+*"The coefficients are created using a **no intercept** model, lmer(outcome ~ 1 + (1 | predictor), data = data, ...)"*
+
+So, instead of lmer(yield ~ fertilizer + (1|field)), **step_lencode_mixed() should be fitting lmer(yield ~ 1 + (1|field))**
+
+```{r}
+#| label: mod2 ML_3
+#| echo: true
+#| output-location: column-fragment
+
+fit_2b <- 
+  lmer(yield ~ 1 + (1 | field), data = dat2)
+tidy(predict(fit_2b)) |>
+  head(n = 8) |> 
+  rename(observation = names, field = x) |>
+  as.data.frame()
+```
+
+```{r}
+#| label: mod2 ML_3b
+#| echo: true
+#| output-location: column-fragment
+prep(rec_2) |> 
+  bake(new_data = dat2) |> 
+  head(n = 8) |>
+  as.data.frame()
+```
+
+This matches!
+
+
+## {.smaller}
+
+Remember, one can get the same results by adding grand mean + BLUP in the lmer(outcome ~ 1 + (1 | predictor)) model.
+
+```{r}
+#| label: mod2 ML_4
+#| echo: true
+
+prep(rec_2) |> 
+  bake(new_data = dat2) |>
+  pull(field) |>
+  unique()
+
+fixef(fit_2b) + pull(ranef(fit_2b)$field)
+```
+
+Okay, so now we know that as before, `step_lencode_mixed()` is factoring in the grand mean + BLUP of field 
+
+##
+These are **flairs**. Can you feel it in the air tonighhhhhtttttttt. Waisting time.....
+
+::::::{.columns}
+:::::{.column}
+:::{.callout-tip title=Drugs}
+pew pew
+:::
+:::{.callout-note title=cool}
+ahhhh lalalasklef aslkf klsdafnldkafjgldfkjalf l lsdkfnlsdkf
+:::
+:::::
+
+:::::{.column}
+![](Farmhouse-in-Provence-Vincent-van-Gogh.jpg){fig-align=center width="50%"}
+![](vlinders_cat369.webp){fig-align=center width="50%"}
+::::
+::::::
