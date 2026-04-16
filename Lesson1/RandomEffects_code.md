@@ -35,14 +35,14 @@ library(ADER)
 library(tidyverse)
 ```
 
-    ## ── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
-    ## ✔ dplyr     1.1.4     ✔ readr     2.1.5
-    ## ✔ forcats   1.0.0     ✔ stringr   1.5.1
-    ## ✔ ggplot2   3.5.2     ✔ tibble    3.3.0
-    ## ✔ lubridate 1.9.4     ✔ tidyr     1.3.1
-    ## ✔ purrr     1.1.0
+    ## ── Attaching core tidyverse packages ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse 2.0.0 ──
+    ## ✔ dplyr     1.2.1     ✔ readr     2.1.6
+    ## ✔ forcats   1.0.1     ✔ stringr   1.6.0
+    ## ✔ ggplot2   4.0.1     ✔ tibble    3.3.1
+    ## ✔ lubridate 1.9.4     ✔ tidyr     1.3.2
+    ## ✔ purrr     1.2.1
 
-    ## ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+    ## ── Conflicts ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
     ## ✖ tidyr::expand() masks Matrix::expand()
     ## ✖ dplyr::filter() masks stats::filter()
     ## ✖ dplyr::lag()    masks stats::lag()
@@ -189,21 +189,21 @@ summary(WeedBio_Mod1) #RE captured correctly because number of groups in RE foll
     ## 
     ## Random effects:
     ##  Groups          Name        Variance Std.Dev.
-    ##  Block:Site.Year (Intercept)    0.00   0.000  
-    ##  Site.Year       (Intercept)   71.32   8.445  
-    ##  Residual                    1095.66  33.101  
+    ##  Block:Site.Year (Intercept)    0.0    0.000  
+    ##  Site.Year       (Intercept)   71.3    8.444  
+    ##  Residual                    1095.7   33.101  
     ## Number of obs: 79, groups:  Block:Site.Year, 16; Site.Year, 4
     ## 
     ## Fixed effects:
     ##             Estimate Std. Error      df t value Pr(>|t|)    
-    ## (Intercept)   29.088      5.632  71.000   5.165 2.11e-06 ***
-    ## Site1         12.471      5.632  71.000   2.214 0.030007 *  
-    ## Year1          2.263      5.632  71.000   0.402 0.688998    
+    ## (Intercept)   29.088      5.631  71.000   5.165  2.1e-06 ***
+    ## Site1         12.471      5.631  71.000   2.215 0.029997 *  
+    ## Year1          2.263      5.631  71.000   0.402 0.688980    
     ## CoverCrop1   -20.480      7.414  71.000  -2.762 0.007306 ** 
     ## CoverCrop2   -25.782      7.414  71.000  -3.477 0.000869 ***
     ## CoverCrop3    -1.049      7.414  71.000  -0.141 0.887940    
     ## CoverCrop4   -27.448      7.414  71.000  -3.702 0.000419 ***
-    ## Site1:Year1    3.147      5.632  71.000   0.559 0.578100    
+    ## Site1:Year1    3.147      5.631  71.000   0.559 0.578076    
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
@@ -237,10 +237,10 @@ anova(WeedBio_Mod1)
 
     ## Type III Analysis of Variance Table with Satterthwaite's method
     ##           Sum Sq Mean Sq NumDF DenDF F value    Pr(>F)    
-    ## Site        5373  5373.0     1    71  4.9039   0.03001 *  
-    ## Year         177   176.9     1    71  0.1615   0.68900    
+    ## Site        5374  5373.7     1    71  4.9045    0.0300 *  
+    ## Year         177   177.0     1    71  0.1615    0.6890    
     ## CoverCrop 112957 28239.2     4    71 25.7737 3.271e-13 ***
-    ## Site:Year    342   342.0     1    71  0.3122   0.57810    
+    ## Site:Year    342   342.1     1    71  0.3122    0.5781    
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
