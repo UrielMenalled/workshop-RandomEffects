@@ -203,7 +203,7 @@ data.frame(
 
 :::::{.columns}
 
-::::{.column}
+::::{.column width="60%"}
 
 :::{.callout-tip title="Non-independence from hierarchy must be dealt with"}
 Nesting within experimental groups violates model assumptions
@@ -215,8 +215,10 @@ By taking into account relationships between treatment means, variation within a
 
 ::::
 
-::::{.column}
-![](images/Farmhouse-in-Provence-Vincent-van-Gogh.jpg){fig-align=center width="50%"}
-![](images/field_pic_2.jpg){fig-align=center width="50%"}
+::::{.column width="40%"}
+:::{style="text-align: center;"}
+![](images/Farmhouse-in-Provence-Vincent-van-Gogh.jpg){fig-align=center width="60%"}
+![](images/field_pic_2.jpg){fig-align=center width="60%"}
+:::
 ::::
 :::::
