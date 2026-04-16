@@ -369,268 +369,36 @@ C    4.047619</code></pre>
 </div>
 </div></div>
 </section>
-<section id="machine-learning" class="slide level2 smaller">
-<h2>Machine learning</h2>
-<p>We can recreate the impact of the random effect through linear function encoding. This infuses or “encodes” a factor variable with a response by treating it as a random effect.</p>
-<p>According to the TidyModels documentation, <em>“The coefficients are created using a no intercept model”</em> <code>lmer(outcome ~ 1 + (1 | predictor), data = data, ...)</code>.</p>
-<div class="fragment">
-<p>So, we should be able to recreate predict(fit_simp):</p>
-<div class="cell columns column-output-location">
-<div class="column">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href=""></a><span class="fu">library</span>(recipes)</span>
-<span id="cb11-2"><a href=""></a><span class="fu">library</span>(embed)</span>
-<span id="cb11-3"><a href=""></a></span>
-<span id="cb11-4"><a href=""></a>rec <span class="ot">&lt;-</span> <span class="fu">recipe</span>(yield <span class="sc">~</span> field, <span class="at">data =</span> dat) <span class="sc">|&gt;</span></span>
-<span id="cb11-5"><a href=""></a>  <span class="fu">step_lencode_mixed</span>(field, <span class="at">outcome =</span> <span class="fu">vars</span>(yield))</span>
-<span id="cb11-6"><a href=""></a></span>
-<span id="cb11-7"><a href=""></a><span class="fu">prep</span>(rec) <span class="sc">|&gt;</span> <span class="fu">bake</span>(<span class="at">new_data =</span> dat)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div><div class="column fragment">
-<div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 9 × 2
-  field yield
-  &lt;dbl&gt; &lt;dbl&gt;
-1  3.19     2
-2  3.19     3
-3  3.19     4
-4  5.76     5
-5  5.76     6
-6  5.76     7
-7  4.05     3
-8  4.05     4
-9  4.05     5</code></pre>
-</div>
-</div></div>
-</div>
-<div class="fragment">
-<div class="callout callout-warning callout-titled callout-style-default">
-<div class="callout-body">
-<div class="callout-title">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<p><strong>Warning</strong></p>
-</div>
-<div class="callout-content">
-<p>Notice that the recipe formula is not the same as the lmer formula. In the TidyModels syntax, you just tell it which columns to encode and what the outcome is. So in this case, <code>yield~field</code>.</p>
-</div>
-</div>
-</div>
-</div>
-</section>
-<section id="the-more-complicated-model-1" class="slide level2 smaller">
-<h2>The more complicated model #1</h2>
-<p>What if you model contains a numeric fixed effect?</p>
-<p>Now that we know how R calculates BLUPs and predictions, we can create a bigger data frame to allow us to fit a more complicated model.</p>
-<div class="cell">
-<div class="cell-output cell-output-stdout">
-<pre><code>Rows: 30
-Columns: 3
-$ field      &lt;chr&gt; "A", "A", "A", "A", "A", "A", "B", "B", "B", "B", "B", "B",…
-$ fertilizer &lt;dbl&gt; 10, 20, 30, 40, 50, 60, 10, 20, 30, 40, 50, 60, 10, 20, 30,…
-$ yield      &lt;dbl&gt; 1.8, 2.9, 4.1, 5.0, 6.2, 7.1, 4.5, 5.8, 6.9, 8.1, 9.0, 10.2…</code></pre>
-</div>
-</div>
-</section>
-<section id="the-more-complicated-model-1-1" class="slide level2 smaller">
-<h2>The more complicated model #1</h2>
-<p>We can manually calculate predictions with the formula:</p>
-<p><span class="math display">\[y_{ij} = \beta_0 + \beta_1 \text{fertilizer}_{ij} + u_i + \varepsilon_{ij}\]</span></p>
-<p>where: - <span class="math inline">\(y_{ij}\)</span> = yield for observation <span class="math inline">\(j\)</span> in field <span class="math inline">\(i\)</span></p>
-<ul>
-<li><p><span class="math inline">\(\beta_0\)</span> = fixed intercept</p></li>
-<li><p><span class="math inline">\(\beta_1\)</span> = fixed slope for fertilizer</p></li>
-<li><p><span class="math inline">\(u_i \sim N(0, \sigma^2_u)\)</span> = random intercept for field <span class="math inline">\(i\)</span></p></li>
-<li><p><span class="math inline">\(\varepsilon_{ij} \sim N(0, \sigma^2_e)\)</span> = residual error</p></li>
-</ul>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href=""></a>fit_2 <span class="ot">&lt;-</span> <span class="fu">lmer</span>(yield <span class="sc">~</span> fertilizer <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> field), <span class="at">data =</span> dat2)</span>
-<span id="cb14-2"><a href=""></a>fit_2_re <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">field =</span> <span class="fu">row.names</span>(<span class="fu">ranef</span>(fit_2)<span class="sc">$</span>field), <span class="at">BLUP =</span> <span class="fu">pull</span>(<span class="fu">ranef</span>(fit_2)<span class="sc">$</span>field))</span>
-<span id="cb14-3"><a href=""></a></span>
-<span id="cb14-4"><a href=""></a>dat2<span class="sc">%&gt;%</span> </span>
-<span id="cb14-5"><a href=""></a>  <span class="fu">mutate</span>(<span class="at">intercept =</span> <span class="fu">fixef</span>(fit_2)[<span class="dv">1</span>],</span>
-<span id="cb14-6"><a href=""></a>         <span class="at">fert_eff =</span> <span class="fu">fixef</span>(fit_2)[<span class="dv">2</span>]) <span class="sc">%&gt;%</span> </span>
-<span id="cb14-7"><a href=""></a>  <span class="fu">left_join</span>(.,fit_2_re) <span class="sc">%&gt;%</span> </span>
-<span id="cb14-8"><a href=""></a>  <span class="fu">mutate</span>(<span class="at">preds_manual =</span> intercept <span class="sc">+</span> fertilizer<span class="sc">*</span>fert_eff <span class="sc">+</span> BLUP,</span>
-<span id="cb14-9"><a href=""></a>         <span class="at">preds_R =</span> <span class="fu">predict</span>(fit_2)) <span class="sc">%&gt;%</span> </span>
-<span id="cb14-10"><a href=""></a>  <span class="fu">slice_sample</span>(<span class="at">n =</span> <span class="dv">10</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div>
-</section>
-<section id="the-more-complicated-model-1-2" class="slide level2 smaller">
-<h2>The more complicated model #1</h2>
-<p>Great, we were able to get prediction by hand</p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href=""></a>dat2<span class="sc">%&gt;%</span> </span>
-<span id="cb15-2"><a href=""></a>  <span class="fu">mutate</span>(<span class="at">intercept =</span> <span class="fu">fixef</span>(fit_2)[<span class="dv">1</span>],</span>
-<span id="cb15-3"><a href=""></a>         <span class="at">fert_eff =</span> <span class="fu">fixef</span>(fit_2)[<span class="dv">2</span>]) <span class="sc">%&gt;%</span> </span>
-<span id="cb15-4"><a href=""></a>  <span class="fu">left_join</span>(.,fit_2_re) <span class="sc">%&gt;%</span> </span>
-<span id="cb15-5"><a href=""></a>  <span class="fu">mutate</span>(<span class="at">preds_manual =</span> intercept <span class="sc">+</span> fertilizer<span class="sc">*</span>fert_eff <span class="sc">+</span> BLUP,</span>
-<span id="cb15-6"><a href=""></a>         <span class="at">preds_R =</span> <span class="fu">predict</span>(fit_2)) <span class="sc">%&gt;%</span> </span>
-<span id="cb15-7"><a href=""></a>  <span class="fu">head</span>(<span class="at">n =</span> <span class="dv">10</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>   field fertilizer yield intercept  fert_eff      BLUP preds_manual  preds_R
-1      A         10   1.8      1.74 0.1097143 -1.062120     1.775023 1.775023
-2      A         20   2.9      1.74 0.1097143 -1.062120     2.872166 2.872166
-3      A         30   4.1      1.74 0.1097143 -1.062120     3.969308 3.969308
-4      A         40   5.0      1.74 0.1097143 -1.062120     5.066451 5.066451
-5      A         50   6.2      1.74 0.1097143 -1.062120     6.163594 6.163594
-6      A         60   7.1      1.74 0.1097143 -1.062120     7.260737 7.260737
-7      B         10   4.5      1.74 0.1097143  1.834571     4.671714 4.671714
-8      B         20   5.8      1.74 0.1097143  1.834571     5.768857 5.768857
-9      B         30   6.9      1.74 0.1097143  1.834571     6.866000 6.866000
-10     B         40   8.1      1.74 0.1097143  1.834571     7.963142 7.963142</code></pre>
-</div>
-</div>
-</section>
-<section id="the-more-complicated-model-1-3" class="slide level2 smaller">
-<h2>The more complicated model #1</h2>
-<p>Now the question is what is happening in our ML framework…</p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href=""></a>rec_2 <span class="ot">&lt;-</span> <span class="fu">recipe</span>(yield <span class="sc">~</span> fertilizer <span class="sc">+</span> field, <span class="at">data =</span> dat2) <span class="sc">|&gt;</span></span>
-<span id="cb17-2"><a href=""></a>  <span class="fu">step_lencode_mixed</span>(field, <span class="at">outcome =</span> <span class="fu">vars</span>(yield))</span>
-<span id="cb17-3"><a href=""></a><span class="fu">prep</span>(rec_2) <span class="sc">|&gt;</span> <span class="fu">bake</span>(<span class="at">new_data =</span> dat2)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 30 × 3
-   fertilizer field yield
-        &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
- 1         10  4.92   1.8
- 2         20  4.92   2.9
- 3         30  4.92   4.1
- 4         40  4.92   5  
- 5         50  4.92   6.2
- 6         60  4.92   7.1
- 7         10  6.73   4.5
- 8         20  6.73   5.8
- 9         30  6.73   6.9
-10         40  6.73   8.1
-# ℹ 20 more rows</code></pre>
-</div>
-</div>
-<div class="fragment">
-<div class="callout callout-caution callout-titled callout-style-default">
-<div class="callout-body">
-<div class="callout-title">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<p><strong>Caution</strong></p>
-</div>
-<div class="callout-content">
-<p>Wait a minute! these field values aren’t the predictions OR the BLUP values of <code>fit_2</code> (see prev. slide).</p>
-</div>
-</div>
-</div>
-</div>
-<div class="fragment">
-<div class="callout callout-tip callout-titled callout-style-default">
-<div class="callout-body">
-<div class="callout-title">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<p><strong>Tip</strong></p>
-</div>
-<div class="callout-content">
-<p>Remember, the TidyModels doc…</p>
-</div>
-</div>
-</div>
-</div>
-</section>
-<section id="section-1" class="slide level2 smaller">
-<h2></h2>
-<p><em>“The coefficients are created using a <strong>no intercept</strong> model, lmer(outcome ~ 1 + (1 | predictor), data = data, …)”</em></p>
-<p>So, instead of lmer(yield ~ fertilizer + (1|field)), <strong>step_lencode_mixed() should be fitting lmer(yield ~ 1 + (1|field))</strong></p>
-<div class="cell columns column-output-location">
-<div class="column">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href=""></a>fit_2b <span class="ot">&lt;-</span> </span>
-<span id="cb19-2"><a href=""></a>  <span class="fu">lmer</span>(yield <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> field), <span class="at">data =</span> dat2)</span>
-<span id="cb19-3"><a href=""></a><span class="fu">tidy</span>(<span class="fu">predict</span>(fit_2b)) <span class="sc">|&gt;</span></span>
-<span id="cb19-4"><a href=""></a>  <span class="fu">head</span>(<span class="at">n =</span> <span class="dv">8</span>) <span class="sc">|&gt;</span> </span>
-<span id="cb19-5"><a href=""></a>  <span class="fu">rename</span>(<span class="at">observation =</span> names, <span class="at">field =</span> x) <span class="sc">|&gt;</span></span>
-<span id="cb19-6"><a href=""></a>  <span class="fu">as.data.frame</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div><div class="column fragment">
-<div class="cell-output cell-output-stdout">
-<pre><code>  observation    field
-1           1 4.916620
-2           2 4.916620
-3           3 4.916620
-4           4 4.916620
-5           5 4.916620
-6           6 4.916620
-7           7 6.725839
-8           8 6.725839</code></pre>
-</div>
-</div></div>
-<div class="cell columns column-output-location">
-<div class="column">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href=""></a><span class="fu">prep</span>(rec_2) <span class="sc">|&gt;</span> </span>
-<span id="cb21-2"><a href=""></a>  <span class="fu">bake</span>(<span class="at">new_data =</span> dat2) <span class="sc">|&gt;</span> </span>
-<span id="cb21-3"><a href=""></a>  <span class="fu">head</span>(<span class="at">n =</span> <span class="dv">8</span>) <span class="sc">|&gt;</span></span>
-<span id="cb21-4"><a href=""></a>  <span class="fu">as.data.frame</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div><div class="column fragment">
-<div class="cell-output cell-output-stdout">
-<pre><code>  fertilizer    field yield
-1         10 4.916620   1.8
-2         20 4.916620   2.9
-3         30 4.916620   4.1
-4         40 4.916620   5.0
-5         50 4.916620   6.2
-6         60 4.916620   7.1
-7         10 6.725839   4.5
-8         20 6.725839   5.8</code></pre>
-</div>
-</div></div>
-<p>This matches!</p>
-</section>
-<section id="section-2" class="slide level2 smaller">
-<h2></h2>
-<p>Remember, one can get the same results by adding grand mean + BLUP in the lmer(outcome ~ 1 + (1 | predictor)) model.</p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href=""></a><span class="fu">prep</span>(rec_2) <span class="sc">|&gt;</span> </span>
-<span id="cb23-2"><a href=""></a>  <span class="fu">bake</span>(<span class="at">new_data =</span> dat2) <span class="sc">|&gt;</span></span>
-<span id="cb23-3"><a href=""></a>  <span class="fu">pull</span>(field) <span class="sc">|&gt;</span></span>
-<span id="cb23-4"><a href=""></a>  <span class="fu">unique</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] 4.916620 6.725839 5.582080 6.060379 4.615083</code></pre>
-</div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href=""></a><span class="fu">fixef</span>(fit_2b) <span class="sc">+</span> <span class="fu">pull</span>(<span class="fu">ranef</span>(fit_2b)<span class="sc">$</span>field)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] 4.916620 6.725839 5.582080 6.060379 4.615083</code></pre>
-</div>
-</div>
-<p>Okay, so now we know that as before, <code>step_lencode_mixed()</code> is factoring in the grand mean + BLUP of field</p>
-</section>
-<section id="section-3" class="slide level2">
-<h2></h2>
-<p>These are <strong>flairs</strong>. Can you feel it in the air tonighhhhhtttttttt. Waisting time…..</p>
+<section id="conclusions" class="slide level2">
+<h2>Conclusions</h2>
 <div class="columns">
 <div class="column">
-<div title="Drugs">
+<div title="Non-independence from hierarchy must be dealt with">
 <div class="callout callout-tip callout-titled callout-style-default">
 <div class="callout-body">
 <div class="callout-title">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
-<p><strong>Drugs</strong></p>
+<p><strong>Non-independence from hierarchy must be dealt with</strong></p>
 </div>
 <div class="callout-content">
-<p>pew pew</p>
+<p>Nesting within experimental groups violates model assumptions</p>
 </div>
 </div>
 </div>
 </div>
-<div title="cool">
-<div class="callout callout-note callout-titled callout-style-default">
+<div title="Random effects solve this issue">
+<div class="callout callout-tip callout-titled callout-style-default">
 <div class="callout-body">
 <div class="callout-title">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
-<p><strong>cool</strong></p>
+<p><strong>Random effects solve this issue</strong></p>
 </div>
 <div class="callout-content">
-<p>ahhhh lalalasklef aslkf klsdafnldkafjgldfkjalf l lsdkfnlsdkf</p>
+<p>By taking into account relationships between treatment means, variation within and between groups, and sample size</p>
 </div>
 </div>
 </div>

@@ -199,194 +199,24 @@ data.frame(
   pred = predict(fit_simp))
 ```
 
-## Machine learning {.smaller}
+## Conclusions
 
-We can recreate the impact of the random effect through linear function encoding. This infuses or "encodes" a factor variable with a response by treating it as a random effect.
+:::::{.columns}
 
-According to the TidyModels documentation, *"The coefficients are created using a no intercept model"* `lmer(outcome ~ 1 + (1 | predictor), data = data, ...)`.
+::::{.column}
 
-. . .
-
-So, we should be able to recreate predict(fit_simp):
-
-```{r}
-#| label: simple recipe
-#| echo: true
-#| output-location: column-fragment
-
-library(recipes)
-library(embed)
-
-rec <- recipe(yield ~ field, data = dat) |>
-  step_lencode_mixed(field, outcome = vars(yield))
-
-prep(rec) |> bake(new_data = dat)
-```
-
-. . . 
-
-:::{.callout-warning}
-Notice that the recipe formula is not the same as the lmer formula. In the TidyModels syntax, you just tell it which columns to encode and what the outcome is. So in this case, `yield~field`.
+:::{.callout-tip title="Non-independence from hierarchy must be dealt with"}
+Nesting within experimental groups violates model assumptions
 :::
 
-## The more complicated model #1 {.smaller}
-
-What if you model contains a numeric fixed effect?
-
-Now that we know how R calculates BLUPs and predictions, we can create a bigger data frame to allow us to fit a more complicated model.
-```{r}
-#| label: dat2 creation
-
-dat2 <- data.frame(
-  field      = rep(c("A", "B", "C", "D", "E"), each = 6),
-  fertilizer = rep(c(10, 20, 30, 40, 50, 60), times = 5),
-  yield      = c(
-    1.8, 2.9, 4.1, 5.0, 6.2, 7.1,  # field A — low-yielding
-    4.5, 5.8, 6.9, 8.1, 9.0, 10.2, # field B — high-yielding
-    2.9, 4.0, 5.2, 6.1, 7.3, 8.0,  # field C — average
-    3.5, 4.6, 5.8, 6.9, 8.1, 9.2,  # field D — above average
-    1.2, 2.4, 3.5, 4.6, 5.7, 6.8   # field E — low-yielding
-  )
-)
-glimpse(dat2)
-```
-
-## The more complicated model #1 {.smaller}
-
-We can manually calculate predictions with the formula:
-
-$$y_{ij} = \beta_0 + \beta_1 \text{fertilizer}_{ij} + u_i + \varepsilon_{ij}$$
-
-where:
-- $y_{ij}$ = yield for observation $j$ in field $i$
-
-- $\beta_0$ = fixed intercept
-
-- $\beta_1$ = fixed slope for fertilizer
-
-- $u_i \sim N(0, \sigma^2_u)$ = random intercept for field $i$
-
-- $\varepsilon_{ij} \sim N(0, \sigma^2_e)$ = residual error
-
-```{r}
-#| label: mod 2
-#| echo: true
-#| output: false
-
-fit_2 <- lmer(yield ~ fertilizer + (1 | field), data = dat2)
-fit_2_re <- data.frame(field = row.names(ranef(fit_2)$field), BLUP = pull(ranef(fit_2)$field))
-
-dat2%>% 
-  mutate(intercept = fixef(fit_2)[1],
-         fert_eff = fixef(fit_2)[2]) %>% 
-  left_join(.,fit_2_re) %>% 
-  mutate(preds_manual = intercept + fertilizer*fert_eff + BLUP,
-         preds_R = predict(fit_2)) %>% 
-  slice_sample(n = 10)
-```
-
-## The more complicated model #1 {.smaller}
-
-Great, we were able to get prediction by hand
-```{r}
-#| label: mod2 ML_1
-#| echo: true
-dat2%>% 
-  mutate(intercept = fixef(fit_2)[1],
-         fert_eff = fixef(fit_2)[2]) %>% 
-  left_join(.,fit_2_re) %>% 
-  mutate(preds_manual = intercept + fertilizer*fert_eff + BLUP,
-         preds_R = predict(fit_2)) %>% 
-  head(n = 10)
-```
-
-## The more complicated model #1 {.smaller}
- Now the question is what is happening in our ML framework...
-```{r}
-#| label: mod2 ML_2
-#| echo: true
-
-rec_2 <- recipe(yield ~ fertilizer + field, data = dat2) |>
-  step_lencode_mixed(field, outcome = vars(yield))
-prep(rec_2) |> bake(new_data = dat2)
-```
-
-. . . 
-
-:::{.callout-caution}
-Wait a minute! these field values aren't the predictions OR the BLUP values of `fit_2` (see prev. slide).
+:::{.callout-tip title="Random effects solve this issue"}
+By taking into account relationships between treatment means, variation within and between groups, and sample size
 :::
 
-. . .
+::::
 
-:::{.callout-tip}
-Remember, the TidyModels doc...
-:::
-
-## {.smaller}
-*"The coefficients are created using a **no intercept** model, lmer(outcome ~ 1 + (1 | predictor), data = data, ...)"*
-
-So, instead of lmer(yield ~ fertilizer + (1|field)), **step_lencode_mixed() should be fitting lmer(yield ~ 1 + (1|field))**
-
-```{r}
-#| label: mod2 ML_3
-#| echo: true
-#| output-location: column-fragment
-
-fit_2b <- 
-  lmer(yield ~ 1 + (1 | field), data = dat2)
-tidy(predict(fit_2b)) |>
-  head(n = 8) |> 
-  rename(observation = names, field = x) |>
-  as.data.frame()
-```
-
-```{r}
-#| label: mod2 ML_3b
-#| echo: true
-#| output-location: column-fragment
-prep(rec_2) |> 
-  bake(new_data = dat2) |> 
-  head(n = 8) |>
-  as.data.frame()
-```
-
-This matches!
-
-
-## {.smaller}
-
-Remember, one can get the same results by adding grand mean + BLUP in the lmer(outcome ~ 1 + (1 | predictor)) model.
-
-```{r}
-#| label: mod2 ML_4
-#| echo: true
-
-prep(rec_2) |> 
-  bake(new_data = dat2) |>
-  pull(field) |>
-  unique()
-
-fixef(fit_2b) + pull(ranef(fit_2b)$field)
-```
-
-Okay, so now we know that as before, `step_lencode_mixed()` is factoring in the grand mean + BLUP of field 
-
-##
-These are **flairs**. Can you feel it in the air tonighhhhhtttttttt. Waisting time.....
-
-::::::{.columns}
-:::::{.column}
-:::{.callout-tip title=Drugs}
-pew pew
-:::
-:::{.callout-note title=cool}
-ahhhh lalalasklef aslkf klsdafnldkafjgldfkjalf l lsdkfnlsdkf
-:::
-:::::
-
-:::::{.column}
+::::{.column}
 ![](images/Farmhouse-in-Provence-Vincent-van-Gogh.jpg){fig-align=center width="50%"}
 ![](images/vlinders_cat369.webp){fig-align=center width="50%"}
 ::::
-::::::
+:::::
