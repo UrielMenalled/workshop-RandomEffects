@@ -211,16 +211,17 @@ Uriel Menalled
 </section>
 <section id="introduction" class="slide level2 smaller">
 <h2>Introduction</h2>
-<div class="columns">
-<div class="column" style="width:70%;">
 <ul>
 <li class="fragment"><p>Often data come from experiments with a hierarchial structure</p></li>
 <li class="fragment"><p>Hierarchial structure causes data-points to not meet the assumptions of independence as observations from the same group will be correlated to one another</p></li>
 </ul>
-</div><div class="column" style="width:30%;">
-<p><img data-src="images/Farmhouse-in-Provence-Vincent-van-Gogh.jpg" class="quarto-figure quarto-figure-right" style="width:60.0%"> <img data-src="images/field_pic_2.jpg" class="quarto-figure quarto-figure-right" style="width:60.0%"></p>
-</div></div>
 <div class="fragment">
+<div class="columns">
+<div class="column" style="width:50%;">
+<p><img data-src="images/Farmhouse-in-Provence-Vincent-van-Gogh.jpg" style="object-fit: cover; width: 100%; height: 250px; display: block; margin: auto"></p>
+</div><div class="column" style="width:50%;">
+<p><img data-src="images/field_pic_2.jpg" style="object-fit: cover; width: 100%; height: 250px; display: block; margin: auto"></p>
+</div></div>
 <p>For example, if you were sampling yield in these different fields, observations within the same field would be correlated to one another.</p>
 </div>
 </section>
@@ -231,8 +232,8 @@ Uriel Menalled
 <li class="fragment"><p><strong>The issue</strong>: Observations nested within groups (fields, varieties, blocks) are not independent</p></li>
 <li class="fragment"><p><strong>Naiveté</strong>: Treating nested data as independent leads to underestimated standard errors and spuriously significant results</p></li>
 <li class="fragment"><p><strong>Random Effects Solution</strong>: Allows each group to have its own deviation from the population intercept (or slope), capturing within-group correlation structure</p></li>
-<li class="fragment"><p><strong>Modeling Group Variation</strong>: Instead of treating group membership as a fixed categorical variable, random effects estimate group-specific offsets while sharing information across groups via a shared probability distribution (typically normal)</p></li>
-<li class="fragment"><p><strong>Proper Standard Errors</strong>: By accounting for within-group correlation, random effects yield valid confidence intervals and p-values appropriate to the actual sample size and design</p></li>
+<li class="fragment"><p><strong>Modeling Group Variation</strong>: Instead of treating group membership as a fixed categorical variable, random effects estimate group-specific offsets while sharing information across groups via a shared probability distribution</p></li>
+<li class="fragment"><p><strong>Proper Standard Errors</strong>: By accounting for within-group correlation, random effects yield valid confidence intervals and p-values</p></li>
 <li class="fragment"><p><strong>Efficiency Gain</strong>: Partial pooling (shrinkage) of group estimates improves precision compared to fitting completely separate models per group</p></li>
 </ul>
 </section>

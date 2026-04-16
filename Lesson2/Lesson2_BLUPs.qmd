@@ -24,21 +24,21 @@ set.seed(42)
 
 ## Introduction {.smaller}
 
-:::::{.columns}
-::::{.column width="70%"}
 :::{.incremental}
 - Often data come from experiments with a hierarchial structure
 
 - Hierarchial structure causes data-points to not meet the assumptions of independence as observations from the same group will be correlated to one another
 :::
-::::
+. . .
 
-::::{.column width="30%"}
-![](images/Farmhouse-in-Provence-Vincent-van-Gogh.jpg){fig-align=right width="60%"}
-![](images/field_pic_2.jpg){fig-align=right width="60%"}
+::::: {.columns}
+:::: {.column width="50%"}
+![](images/Farmhouse-in-Provence-Vincent-van-Gogh.jpg){style="object-fit: cover; width: 100%; height: 250px; display: block; margin: auto"}
+::::
+:::: {.column width="50%"}
+![](images/field_pic_2.jpg){style="object-fit: cover; width: 100%; height: 250px; display: block; margin: auto"}
 ::::
 :::::
-. . .
 
 For example, if you were sampling yield in these different fields, observations within the same field would be correlated to one another.
 
@@ -52,9 +52,9 @@ For example, if you were sampling yield in these different fields, observations 
 
 - **Random Effects Solution**: Allows each group to have its own deviation from the population intercept (or slope), capturing within-group correlation structure
 
-- **Modeling Group Variation**: Instead of treating group membership as a fixed categorical variable, random effects estimate group-specific offsets while sharing information across groups via a shared probability distribution (typically normal)
+- **Modeling Group Variation**: Instead of treating group membership as a fixed categorical variable, random effects estimate group-specific offsets while sharing information across groups via a shared probability distribution
 
-- **Proper Standard Errors**: By accounting for within-group correlation, random effects yield valid confidence intervals and p-values appropriate to the actual sample size and design
+- **Proper Standard Errors**: By accounting for within-group correlation, random effects yield valid confidence intervals and p-values
 
 - **Efficiency Gain**: Partial pooling (shrinkage) of group estimates improves precision compared to fitting completely separate models per group
 :::
