@@ -1,5 +1,5 @@
 ---
-title: "Calculating random effects by hand and in R"
+title: "Calculating Random Effects"
 author: "Uriel Menalled"
 date: today
 format: 
@@ -217,6 +217,6 @@ By taking into account relationships between treatment means, variation within a
 
 ::::{.column}
 ![](images/Farmhouse-in-Provence-Vincent-van-Gogh.jpg){fig-align=center width="50%"}
-![](images/vlinders_cat369.webp){fig-align=center width="50%"}
+![](images/field_pic_2.jpg){fig-align=center width="50%"}
 ::::
 :::::
