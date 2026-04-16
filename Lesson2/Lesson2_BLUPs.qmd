@@ -1,5 +1,5 @@
 ---
-title: "Random effects in ML"
+title: "Calculating random effects by hand and in R"
 author: "Uriel Menalled"
 date: today
 format: 
